@@ -1,0 +1,29 @@
+$schema: https://azuremlschemas.azureedge.net/latest/commandJob.schema.json
+
+# enter path to your script files
+code: model
+#   Use the CLI (v2) to create a registered data asset with the following configuration:
+# Name: diabetes-dev-folder
+# Path: The data folder in the experimentation folder which contains the CSV file to train the model. The path should point to the folder, not to the specific file.
+# Hint
+
+# Using the CLI (v2) you can create a data asset by defining the configuration in a YAML file or by specifying the configuration in the CLI command.
+# Complete the job.yml file to define the Azure Machine Learning job to run the train.py script, with the registered data asset as input.
+# invoke completions (Ctrl+Space, Cmd+Space) to see the list of environments available
+command: >-
+  python train.py --training_data ${{inputs.diabetes_dev_folder}} --reg_rate ${{inputs.reg_rate}}
+  
+environment: azureml:AzureML-sklearn-0.24-ubuntu18.04-py37-cpu@latest
+
+# invoke completions (Ctrl+Space, Cmd+Space) to see the list of computes available. 
+compute: richard3
+
+# This defines the input data to mount. The names of the items in inputs can be referenced in the command
+inputs:
+  diabetes_dev_folder:
+    type: uri_folder
+    path: ../experimentation/data
+  reg_rate: 0.01
+
+experiment_name: diabetes-training
+description: Train a model to predict diabetes
