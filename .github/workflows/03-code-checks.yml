@@ -11,17 +11,20 @@ jobs:
     steps:
       - name: Placeholder
         run: echo "Will add code checks here in next step"
-      # - name: Checkout repo
-      #   uses: actions/checkout@main
-      # - name: Setup Python version 3.8
-      #   uses: actions/setup-python@v3
-      #   with:
-      #     python-version: '3.8'
-      # - name: Install Flake8
-      #   run: |
-      #     python -m pip install --upgrade pip
-      #     # pip install -r requirements.txt
-      #     pip install flake8
-      # - name: Lint with flake8
-      #   run: |
-      #     flake8 src/model
+      - name: Checkout repo
+        uses: actions/checkout@main
+      - name: Setup Python version 3.8
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.8'
+      - name: Install Flake8
+        run: |
+          python -m pip install --upgrade pip
+          # pip install -r requirements.txt
+          pip install flake8
+      - name: Lint with flake8
+        run: |
+          flake8 src/model
+      - name: Unit tests
+        run: |
+          pytest tests
