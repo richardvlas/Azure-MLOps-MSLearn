@@ -1,0 +1,58 @@
+name: Using dev and prod environments to run an Azure Machine Learning job
+
+on: 
+  push:
+    branches: [ main ]
+
+
+jobs:
+
+  experiment:
+    
+    name: Experiment training job
+    runs-on: ubuntu-latest
+    environment: development
+    
+    steps:
+    
+    - name: Checkout repo
+      uses: actions/checkout@main
+    
+    - name: Install az ml extension
+      run: az extension add -n ml -y
+    
+    - name: Azure login
+      uses: azure/login@v1
+      with:
+        # Use environment secrets to store the Azure credentials
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    
+    - name: Trigger Azure Machine Learning job
+      run: |
+        az ml job create --file src/job.yml --resource-group aml-rg-rvl --workspace-name ws-rvl
+
+
+  production:
+    
+    name: Production training job
+    runs-on: ubuntu-latest
+    environment: production
+    needs: experiment
+    
+    steps:
+    
+    - name: Checkout repo
+      uses: actions/checkout@main
+    
+    - name: Install az ml extension
+      run: az extension add -n ml -y
+    
+    - name: Azure login
+      uses: azure/login@v1
+      with:
+        # Use environment secrets to store the Azure credentials
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    
+    - name: Trigger Azure Machine Learning job
+      run: |
+        az ml job create --file src/job.yml --resource-group aml-rg-rvl --workspace-name ws-rvl --set inputs.diabetes_dev_folder.path=../production/data --stream
