@@ -38,7 +38,12 @@ def get_csvs_df(path):
 # add function to split data
 def split_data(df):
     # split data
-    X_train, X_test, y_train, y_test = train_test_split(df.drop("Diabetic", axis=1), df["Diabetic"], test_size=0.3, random_state=0)
+    X_train, X_test, y_train, y_test = train_test_split(
+        df.drop("Diabetic", axis=1),
+        df["Diabetic"],
+        test_size=0.3,
+        random_state=0
+    )
 
     # return data
     return X_train, X_test, y_train, y_test
@@ -46,7 +51,10 @@ def split_data(df):
 
 def train_model(reg_rate, X_train, X_test, y_train, y_test):
     # train model
-    LogisticRegression(C=1/reg_rate, solver="liblinear").fit(X_train, y_train)
+    LogisticRegression(
+        C=1 / reg_rate, 
+        solver="liblinear"
+    ).fit(X_train, y_train)
 
 
 def parse_args():
@@ -64,6 +72,7 @@ def parse_args():
 
     # return args
     return args
+
 
 # run script
 if __name__ == "__main__":
