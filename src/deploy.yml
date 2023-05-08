@@ -1,0 +1,5 @@
+$schema: https://azuremlschemas.azureedge.net/latest/managedOnlineDeployment.schema.json
+name: demo
+description: Deploy a model to an Azure Container Instance (ACI)
+instance_type: Standard_E2s_v3
+instance_count: 1

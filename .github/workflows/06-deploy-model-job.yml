@@ -1,0 +1,107 @@
+name: Deploy and test the model
+
+# create global variables
+env:
+  model_name: diabetes-model
+  endpoint_name: diabetes-endpoint-rvl-85
+  deployment_name: diabetes-deployment-rvl-85
+
+
+on: 
+  push:
+    branches: [ main ]
+
+
+jobs:
+
+  experiment:
+    
+    name: Train a model
+    runs-on: ubuntu-latest
+    environment: development
+    
+    steps:
+    
+    - name: Checkout repo
+      uses: actions/checkout@main
+    
+    - name: Install az ml extension
+      run: az extension add -n ml -y
+    
+    - name: Azure login
+      uses: azure/login@v1
+      with:
+        # Use environment secrets to store the Azure credentials
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    
+    - name: Get Azure ML workspace information
+      run: |
+        subscription_id=$(az account show --query id -o tsv)        
+        ws_rg=$(az ml workspace list --subscription $subscription_id  --query "[].{Name:name, ResourceGroup:resourceGroup}" --output tsv)
+        workspace_name=$(echo $ws_rg | cut -d' ' -f1)
+        resource_group_name=$(echo $ws_rg | cut -d' ' -f2)
+        workspace_info="--resource-group $resource_group_name --workspace-name $workspace_name"
+
+    - name: Trigger Azure Machine Learning job
+      run: |
+        parent_job_name=$(az ml job create --file src/job.yml $workspace_info --query name -o tsv)
+        az ml job stream --name $parent_job_name $workspace_info
+
+    - name: Register/Create model in workspace from train job output
+      run: |
+        az ml model create -n $env:model_name --type mlflow_model \
+          --path azureml://jobs/$parent_job_name/outputs/artifacts/paths/model/ $workspace_info
+
+  production:
+    
+    name: Production training job
+    runs-on: ubuntu-latest
+    environment: production
+    needs: experiment
+    
+    steps:
+    
+    - name: Checkout repo
+      uses: actions/checkout@main
+    
+    - name: Install az ml extension
+      run: az extension add -n ml -y
+    
+    - name: Azure login
+      uses: azure/login@v1
+      with:
+        # Use environment secrets to store the Azure credentials
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    
+    # Create online endpoint and deploy model
+    - name: Create online endpoint
+      run: |
+        # Check if endpoint already exists and if not create it
+        endpoint_exists=$(az ml online-endpoint list $workspace_info --query "[?name=='$env:endpoint_name'].name" -o tsv)
+        if [ -z "$endpoint_exists" ]
+        then
+          echo "Endpoint does not exist. Creating endpoint..."
+          az ml online-endpoint create --name $env:endpoint_name $workspace_info
+        else
+          echo "Endpoint already exists. Skipping endpoint creation..."
+        fi
+    
+    # Deploy model from Model registry to online endpoint
+    - name: Deploy model to online endpoint
+      run: |
+        # Get the latest model version
+        model_version=$(az ml model list --name $env:model_name \
+          --query "max_by([].version, &to_number(@))" -o tsv $workspace_info)
+
+        # Check if online deployment already exists and if not create it
+        deployment_exists=$(az ml online-deployment list --endpoint-name $env:endpoint_name \
+          --query "[?name=='$env:deployment_name'].name" -o tsv $workspace_info)
+        if [ -z "$deployment_exists" ]
+        then
+          echo "Deployment does not exist. Creating deployment..."
+          az ml online-deployment create --file src/deploy.yml $workspace_info --set \
+            endpoint_name=$env:endpoint_name model=azureml:$env:model_name:$model_version \
+            name=$env:deployment_name
+        else
+          echo "Deployment already exists. Skipping deployment creation..."
+        fi
