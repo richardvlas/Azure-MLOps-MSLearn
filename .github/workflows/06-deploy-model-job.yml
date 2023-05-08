@@ -1,4 +1,4 @@
-name: Deploy and test the model
+name: Train and Deploy the model
 
 # create global variables
 env:
@@ -8,9 +8,7 @@ env:
 
 
 on: 
-  push:
-    branches: [ main ]
-
+  workflow_dispatch:
 
 jobs:
 
