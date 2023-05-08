@@ -1,4 +1,4 @@
-name: Deploy and test the model
+name: Train and Deploy the model
 
 # create global variables
 env:
@@ -7,10 +7,11 @@ env:
   deployment_name: diabetes-deployment-rvl-85
 
 
+# on: 
+#   push:
+#     branches: [ main ]
 on: 
-  push:
-    branches: [ main ]
-
+  workflow_dispatch:
 
 jobs:
 
