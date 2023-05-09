@@ -42,16 +42,19 @@ jobs:
         workspace_name=$(echo $ws_rg | cut -d' ' -f1)
         resource_group_name=$(echo $ws_rg | cut -d' ' -f2)
         workspace_info="--resource-group $resource_group_name --workspace-name $workspace_name"
+      shell: bash
 
     - name: Trigger Azure Machine Learning job
       run: |
         parent_job_name=$(az ml job create --file src/job.yml $workspace_info --query name -o tsv)
         az ml job stream --name $parent_job_name $workspace_info
+      shell: bash
 
     - name: Register/Create model in workspace from train job output
       run: |
         az ml model create -n $env:model_name --type mlflow_model \
           --path azureml://jobs/$parent_job_name/outputs/artifacts/paths/model/ $workspace_info
+      shell: bash
 
   production:
     
