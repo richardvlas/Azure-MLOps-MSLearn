@@ -50,11 +50,14 @@ jobs:
         # use the workspace_info variable from the $GITHUB_ENV to pass the workspace information to the job
         parent_job_name=$(az ml job create --file src/job.yml ${{ env.workspace_info }} --query name -o tsv)
         az ml job stream --name $parent_job_name ${{ env.workspace_info }}
+        # set parent_job_name to be able to be used in subsequent steps
+        echo "parent_job_name=$parent_job_name" >> $GITHUB_ENV
 
     - name: Register/Create model in workspace from train job output
       run: |
         az ml model create -n ${{ env.model_name }} --type mlflow_model \
           --path azureml://jobs/$parent_job_name/outputs/artifacts/paths/model/ ${{ env.workspace_info }}
+          --path azureml://jobs/${{ env.parent_job_name }}/outputs/artifacts/paths/model/ ${{ env.workspace_info }
 
   production:
     
