@@ -37,21 +37,24 @@ jobs:
     
     - name: Get Azure ML workspace information
       run: |
-        export subscription_id=$(az account show --query id -o tsv)        
-        export ws_rg=$(az ml workspace list --subscription $subscription_id  --query "[].{Name:name, ResourceGroup:resourceGroup}" --output tsv)
-        export workspace_name=$(echo $ws_rg | cut -d' ' -f1)
-        export resource_group_name=$(echo $ws_rg | cut -d' ' -f2)
-        export workspace_info="--resource-group $resource_group_name --workspace-name $workspace_name"
+        subscription_id=$(az account show --query id -o tsv)        
+        ws_rg=$(az ml workspace list --subscription $subscription_id  --query "[].{Name:name, ResourceGroup:resourceGroup}" --output tsv)
+        workspace_name=$(echo $ws_rg | cut -d' ' -f1)
+        resource_group_name=$(echo $ws_rg | cut -d' ' -f2)
+        workspace_info="--resource-group $resource_group_name --workspace-name $workspace_name"
+        # set workspace_info to be able to be used in subsequent steps
+        echo "workspace_info=$workspace_info" >> $GITHUB_ENV
 
     - name: Trigger Azure Machine Learning job
       run: |
-        parent_job_name=$(az ml job create --file src/job.yml $workspace_info --query name -o tsv)
-        az ml job stream --name $parent_job_name $workspace_info
+        # use the workspace_info variable from the $GITHUB_ENV to pass the workspace information to the job
+        parent_job_name=$(az ml job create --file src/job.yml ${{ env.workspace_info }} --query name -o tsv)
+        az ml job stream --name $parent_job_name ${{ env.workspace_info }}
 
     - name: Register/Create model in workspace from train job output
       run: |
         az ml model create -n $env:model_name --type mlflow_model \
-          --path azureml://jobs/$parent_job_name/outputs/artifacts/paths/model/ $workspace_info
+          --path azureml://jobs/$parent_job_name/outputs/artifacts/paths/model/ ${{ env.workspace_info }}
 
   production:
     
@@ -78,7 +81,7 @@ jobs:
     - name: Create online endpoint
       run: |
         # Check if endpoint already exists and if not create it
-        endpoint_exists=$(az ml online-endpoint list $workspace_info --query "[?name=='$env:endpoint_name'].name" -o tsv)
+        endpoint_exists=$(az ml online-endpoint list ${{ env.workspace_info }} --query "[?name=='$env:endpoint_name'].name" -o tsv)
         if [ -z "$endpoint_exists" ]
         then
           echo "Endpoint does not exist. Creating endpoint..."
