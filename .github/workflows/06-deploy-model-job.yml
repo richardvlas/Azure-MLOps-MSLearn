@@ -42,7 +42,6 @@ jobs:
         workspace_name=$(echo $ws_rg | cut -d' ' -f1)
         resource_group_name=$(echo $ws_rg | cut -d' ' -f2)
         workspace_info="--resource-group $resource_group_name --workspace-name $workspace_name"
-        # set workspace_info to be able to be used in subsequent steps
         echo "workspace_info=$workspace_info" >> $GITHUB_ENV
 
     - name: Trigger Azure Machine Learning job
@@ -50,7 +49,6 @@ jobs:
         # use the workspace_info variable from the $GITHUB_ENV to pass the workspace information to the job
         parent_job_name=$(az ml job create --file src/job.yml ${{ env.workspace_info }} --query name -o tsv)
         az ml job stream --name $parent_job_name ${{ env.workspace_info }}
-        # set parent_job_name to be able to be used in subsequent steps
         echo "parent_job_name=$parent_job_name" >> $GITHUB_ENV
 
     - name: Register/Create model in workspace from train job output
@@ -78,6 +76,15 @@ jobs:
       with:
         # Use environment secrets to store the Azure credentials
         creds: ${{ secrets.AZURE_CREDENTIALS }}
+    
+    - name: Get Azure ML workspace information
+      run: |
+        subscription_id=$(az account show --query id -o tsv)        
+        ws_rg=$(az ml workspace list --subscription $subscription_id  --query "[].{Name:name, ResourceGroup:resourceGroup}" --output tsv)
+        workspace_name=$(echo $ws_rg | cut -d' ' -f1)
+        resource_group_name=$(echo $ws_rg | cut -d' ' -f2)
+        workspace_info="--resource-group $resource_group_name --workspace-name $workspace_name"
+        echo "workspace_info=$workspace_info" >> $GITHUB_ENV
     
     # Create online endpoint and deploy model
     - name: Create online endpoint
