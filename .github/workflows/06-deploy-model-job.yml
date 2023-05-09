@@ -93,7 +93,7 @@ jobs:
     # Deploy model from Model registry to online endpoint
     - name: Deploy model to online endpoint
       run: |
-        # Get the latest model version
+        # Get the latest model version from the model registry
         model_version=$(az ml model list --name ${{ env.model_name }} \
           --query "max_by([].version, &to_number(@))" -o tsv ${{ env.workspace_info }})
 
