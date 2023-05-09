@@ -113,7 +113,7 @@ jobs:
         then
           echo "Deployment does not exist. Creating deployment..."
           az ml online-deployment create --file src/deploy.yml $workspace_info --set \
-            endpoint_name=${{ env.endpoint_name }} model=azureml:${{ env.model_name }}:${{ env.model_version }} \
+            endpoint_name=${{ env.endpoint_name }} model=azureml:${{ env.model_name }}:$model_version \
             name=${{ env.deployment_name }}
         else
           echo "Deployment already exists. Skipping deployment creation..."
