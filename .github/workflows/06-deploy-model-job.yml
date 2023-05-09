@@ -56,7 +56,7 @@ jobs:
     - name: Register/Create model in workspace from train job output
       run: |
         az ml model create -n ${{ env.model_name }} --type mlflow_model \
-          --path azureml://jobs/${{ env.parent_job_name }}/outputs/artifacts/paths/model/ ${{ env.workspace_info }
+          --path azureml://jobs/${{ env.parent_job_name }}/outputs/artifacts/paths/model/ ${{ env.workspace_info }}
 
   production:
     
