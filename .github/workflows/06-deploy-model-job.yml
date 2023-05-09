@@ -109,3 +109,5 @@ jobs:
         else
           echo "Deployment already exists. Skipping deployment creation..."
         fi
+
+# Add a new job to the workflow that will run the model training script        
