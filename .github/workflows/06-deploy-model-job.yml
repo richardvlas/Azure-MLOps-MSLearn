@@ -7,6 +7,9 @@ env:
   deployment_name: diabetes-deployment-rvl-85
 
 
+# on: 
+#   push:
+#     branches: [ main ]
 on: 
   workflow_dispatch:
 
@@ -39,16 +42,19 @@ jobs:
         workspace_name=$(echo $ws_rg | cut -d' ' -f1)
         resource_group_name=$(echo $ws_rg | cut -d' ' -f2)
         workspace_info="--resource-group $resource_group_name --workspace-name $workspace_name"
+        # set workspace_info to be able to be used in subsequent steps
+        echo "workspace_info=$workspace_info" >> $GITHUB_ENV
 
     - name: Trigger Azure Machine Learning job
       run: |
-        parent_job_name=$(az ml job create --file src/job.yml $workspace_info --query name -o tsv)
-        az ml job stream --name $parent_job_name $workspace_info
+        # use the workspace_info variable from the $GITHUB_ENV to pass the workspace information to the job
+        parent_job_name=$(az ml job create --file src/job.yml ${{ env.workspace_info }} --query name -o tsv)
+        az ml job stream --name $parent_job_name ${{ env.workspace_info }}
 
     - name: Register/Create model in workspace from train job output
       run: |
-        az ml model create -n $env:model_name --type mlflow_model \
-          --path azureml://jobs/$parent_job_name/outputs/artifacts/paths/model/ $workspace_info
+        az ml model create -n ${{ env.model_name }} --type mlflow_model \
+          --path azureml://jobs/$parent_job_name/outputs/artifacts/paths/model/ ${{ env.workspace_info }}
 
   production:
     
@@ -75,11 +81,11 @@ jobs:
     - name: Create online endpoint
       run: |
         # Check if endpoint already exists and if not create it
-        endpoint_exists=$(az ml online-endpoint list $workspace_info --query "[?name=='$env:endpoint_name'].name" -o tsv)
+        endpoint_exists=$(az ml online-endpoint list ${{ env.workspace_info }} --query "[?name=='${{ env.endpoint_name }}'].name" -o tsv)
         if [ -z "$endpoint_exists" ]
         then
           echo "Endpoint does not exist. Creating endpoint..."
-          az ml online-endpoint create --name $env:endpoint_name $workspace_info
+          az ml online-endpoint create --name ${{ env.endpoint_name }} ${{ env.workspace_info }}
         else
           echo "Endpoint already exists. Skipping endpoint creation..."
         fi
@@ -87,19 +93,19 @@ jobs:
     # Deploy model from Model registry to online endpoint
     - name: Deploy model to online endpoint
       run: |
-        # Get the latest model version
-        model_version=$(az ml model list --name $env:model_name \
-          --query "max_by([].version, &to_number(@))" -o tsv $workspace_info)
+        # Get the latest model version from the model registry
+        model_version=$(az ml model list --name ${{ env.model_name }} \
+          --query "max_by([].version, &to_number(@))" -o tsv ${{ env.workspace_info }})
 
         # Check if online deployment already exists and if not create it
-        deployment_exists=$(az ml online-deployment list --endpoint-name $env:endpoint_name \
-          --query "[?name=='$env:deployment_name'].name" -o tsv $workspace_info)
+        deployment_exists=$(az ml online-deployment list --endpoint-name ${{ env.endpoint_name }} \
+          --query "[?name=='${{ env.deployment_name }}'].name" -o tsv ${{ env.workspace_info }})
         if [ -z "$deployment_exists" ]
         then
           echo "Deployment does not exist. Creating deployment..."
           az ml online-deployment create --file src/deploy.yml $workspace_info --set \
-            endpoint_name=$env:endpoint_name model=azureml:$env:model_name:$model_version \
-            name=$env:deployment_name
+            endpoint_name=${{ env.endpoint_name }} model=azureml:${{ env.model_name }}:${{ env.model_version }} \
+            name=${{ env.deployment_name }}
         else
           echo "Deployment already exists. Skipping deployment creation..."
         fi
