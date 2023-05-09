@@ -7,9 +7,6 @@ env:
   deployment_name: diabetes-deployment-rvl-85
 
 
-# on: 
-#   push:
-#     branches: [ main ]
 on: 
   workflow_dispatch:
 
